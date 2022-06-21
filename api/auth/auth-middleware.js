@@ -1,4 +1,4 @@
-const db = require('../../data/db-config')
+const User = require('../users/users-model')
 
 /*
   If the user does not have a session saved in the server
@@ -9,11 +9,13 @@ const db = require('../../data/db-config')
   }
 */
 function restricted(req, res, next) {
- if (req.session.username == null){
+ if (req.session.user){
+  next();
+  
+ } else{
   res.status(403).json({message: 'You shall not pass!'})
   return;
  }
- next();
 }
 
 /*
@@ -25,12 +27,18 @@ function restricted(req, res, next) {
   }
 */
 async function checkUsernameFree(req, res, next) {
-  const username = await db('users').where('username', req.body.username);
-  if (username){
+  try {
+    const users = await User.findBy({username: req.body.username})
+  if (!users.length){
+    next();
+  } else {
     res.status(422).json({message: 'Username taken'})
     return;
+  } 
+  } catch(err){
+    next(err)
   }
-  next();
+  
 }
 
 /*
@@ -42,12 +50,15 @@ async function checkUsernameFree(req, res, next) {
   }
 */
 async function checkUsernameExists(req, res, next) {
-  const username = await db('users').where('username', req.body.username);
-  if (!username){
-    res.status(401).json({message: 'Invalid credentials'})
+  const username = await User.findBy({username: req.body.username});
+  if (username.length){
+     
+     next();
+  } 
+  else {
+   res.status(401).json({message: 'Invalid credentials'})
     return;
   }
-  next();
 }
 
 /*
@@ -59,7 +70,7 @@ async function checkUsernameExists(req, res, next) {
   }
 */
 async function checkPasswordLength(req, res, next) {
-  if (req.body.password == null || req.body.password.length <= 3){
+  if (!req.body.password || req.body.password.length <= 3){
     res.status(422).json({message: "Password must be longer than 3 chars"})
     return;
   }
