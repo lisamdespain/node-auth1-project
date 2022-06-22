@@ -13,7 +13,7 @@ function restricted(req, res, next) {
   next();
   
  } else{
-  res.status(403).json({message: 'You shall not pass!'})
+  res.status(401).json({message: 'You shall not pass!'})
   return;
  }
 }
@@ -50,16 +50,21 @@ async function checkUsernameFree(req, res, next) {
   }
 */
 async function checkUsernameExists(req, res, next) {
-  const username = await User.findBy({username: req.body.username});
+  try {
+    const username = await User.findBy({username: req.body.username});
+  console.log(username)
   if (username.length){
-     
+     req.user = username[0];
      next();
-  } 
-  else {
-   res.status(401).json({message: 'Invalid credentials'})
+  } else{
+     res.status(401).json({message: 'Invalid credentials'})
     return;
   }
+} catch(err){
+   next(err);
 }
+}
+
 
 /*
   If password is missing from req.body, or if it's 3 chars or shorter
